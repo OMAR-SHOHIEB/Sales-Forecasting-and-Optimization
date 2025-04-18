@@ -23,7 +23,9 @@ if not os.path.exists('models/best_model.txt'):
 
 # Load the best model name
 with open('models/best_model.txt', 'r') as f:
-    best_model_name = f.read().strip()
+    model_info = f.readlines()
+best_model_name = model_info[0].strip()
+best_r2 = model_info[3].split(': ')[1].strip()
 
 st.info(f"Using {best_model_name} model for predictions")
 
@@ -158,6 +160,7 @@ with tab2:
 # Add information about the model
 st.sidebar.header("Model Information")
 st.sidebar.write(f"**Best Model:** {best_model_name}")
+st.sidebar.write(f"**R² Score:** {best_r2}")
 st.sidebar.write("**Features used:**")
 st.sidebar.write("- Date (year, month, day of week, day of month)")
 st.sidebar.write("- Country")
