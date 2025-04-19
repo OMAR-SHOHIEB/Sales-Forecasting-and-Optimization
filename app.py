@@ -23,7 +23,6 @@ if not os.path.exists('models/best_model.txt'):
 with open('models/best_model.txt', 'r') as f:
     model_info = f.readlines()
 best_model_name = model_info[0].split(':')[0].strip()
-
 best_r2 = model_info[3].split(': ')[1].strip()
 
 st.info(f"Using {best_model_name} model for predictions")
@@ -60,9 +59,8 @@ def predict_sales(df):
     
     features = ['year', 'month', 'day_of_week', 'day_of_month', 
                 'country_encoded', 'store_encoded', 'product_encoded']
+    predictions = model.predict(df[features])
     predictions = model.predict(df[features]).astype(int)
-    
-
     return predictions
 
 # Create tabs for different input methods
@@ -148,10 +146,7 @@ with tab2:
 
 # Add information about the model
 st.sidebar.header("Model Information")
-
-st.sidebar.write(f"**Model:** {best_model_name}")
-
-st.sidebar.write(f"**Model:** {best_model_name}")
+st.sidebar.write(f"**Best Model:** {best_model_name}")
 st.sidebar.write(f"**R² Score:** {best_r2}")
 st.sidebar.write("**Features used:**")
 st.sidebar.write("- Date (year, month, day of week, day of month)")
