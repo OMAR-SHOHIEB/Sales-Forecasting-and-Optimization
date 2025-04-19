@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelEncoder
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from prophet import Prophet
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import os
 
 # Reuse preprocessing function from model_comparison.py
@@ -59,6 +59,7 @@ def train_best_model(df):
     xgb_predictions = xgb_model.predict(X)
     xgb_rmse = np.sqrt(mean_squared_error(y, xgb_predictions))
     xgb_mae = mean_absolute_error(y, xgb_predictions)
+    xgb_r2 = r2_score(y, xgb_predictions)
     
     print("Training LightGBM model...")
     lgbm_model = LGBMRegressor(random_state=42)
@@ -66,6 +67,7 @@ def train_best_model(df):
     lgbm_predictions = lgbm_model.predict(X)
     lgbm_rmse = np.sqrt(mean_squared_error(y, lgbm_predictions))
     lgbm_mae = mean_absolute_error(y, lgbm_predictions)
+    lgbm_r2 = r2_score(y, lgbm_predictions)
     
     print("Training Prophet model...")
     prophet_df = df[['date', target]].rename(columns={'date': 'ds', target: 'y'})
@@ -78,12 +80,13 @@ def train_best_model(df):
     prophet_predictions = forecast['yhat']
     prophet_rmse = np.sqrt(mean_squared_error(prophet_df['y'], prophet_predictions))
     prophet_mae = mean_absolute_error(prophet_df['y'], prophet_predictions)
+    prophet_r2 = r2_score(prophet_df['y'], prophet_predictions)
     
     # Compare models and save the best one
     models = {
-        'XGBoost': {'model': xgb_model, 'rmse': xgb_rmse, 'mae': xgb_mae},
-        'LightGBM': {'model': lgbm_model, 'rmse': lgbm_rmse, 'mae': lgbm_mae},
-        'Prophet': {'model': prophet_model, 'rmse': prophet_rmse, 'mae': prophet_mae}
+        'XGBoost': {'model': xgb_model, 'rmse': xgb_rmse, 'mae': xgb_mae, 'r2': xgb_r2},
+        'LightGBM': {'model': lgbm_model, 'rmse': lgbm_rmse, 'mae': lgbm_mae, 'r2': lgbm_r2},
+        'Prophet': {'model': prophet_model, 'rmse': prophet_rmse, 'mae': prophet_mae, 'r2': prophet_r2}
     }
     
     # Find the best model based on RMSE
@@ -95,6 +98,7 @@ def train_best_model(df):
         print(f"\n{model_name}:")
         print(f"RMSE: {metrics['rmse']:.2f}")
         print(f"MAE: {metrics['mae']:.2f}")
+        print(f"R2: {metrics['r2']:.2f}")
     
     print(f"\nBest model: {best_model_name} with RMSE: {models[best_model_name]['rmse']:.2f}")
     
@@ -107,7 +111,10 @@ def train_best_model(df):
     
     # Save model name for reference in the Streamlit app
     with open('models/best_model.txt', 'w') as f:
-        f.write(best_model_name)
+        f.write(f"{best_model_name}\n")
+        f.write(f"RMSE: {models[best_model_name]['rmse']:.2f}\n")
+        f.write(f"MAE: {models[best_model_name]['mae']:.2f}\n")
+        f.write(f"R2: {models[best_model_name]['r2']:.2f}")
     
     return best_model_name, best_model
 
