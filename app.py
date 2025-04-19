@@ -1,10 +1,8 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 import os
-from datetime import datetime, timedelta
-from prophet.serialize import model_from_json
+from datetime import datetime
 
 # Set page configuration
 st.set_page_config(page_title="Sales Forecasting App", layout="wide")
@@ -23,7 +21,9 @@ if not os.path.exists('models/best_model.txt'):
 
 # Load the best model name
 with open('models/best_model.txt', 'r') as f:
-    best_model_name = f.read().strip()
+    model_info = f.readlines()
+best_model_name = model_info[0].split(':')[0].strip()
+best_r2 = model_info[3].split(': ')[1].strip()
 
 st.info(f"Using {best_model_name} model for predictions")
 
@@ -33,13 +33,7 @@ le_store = joblib.load('models/le_store.pkl')
 le_product = joblib.load('models/le_product.pkl')
 
 # Load the best model
-if best_model_name in ['XGBoost', 'LightGBM']:
-    model = joblib.load(f'models/{best_model_name.lower()}_model.pkl')
-    model_type = 'ml'
-else:  # Prophet model
-    with open('models/prophet_model.json', 'r') as fin:
-        model = model_from_json(fin.read())
-    model_type = 'prophet'
+model = joblib.load(f'models/{best_model_name.lower()}_model.pkl')
 
 # Function to preprocess input data
 def preprocess_input(df):
@@ -63,15 +57,11 @@ def preprocess_input(df):
 def predict_sales(df):
     df = preprocess_input(df)
     
-    if model_type == 'ml':
-        features = ['year', 'month', 'day_of_week', 'day_of_month', 
-                   'country_encoded', 'store_encoded', 'product_encoded']
-        predictions = model.predict(df[features])
-    else:  # Prophet model
-        prophet_df = df[['date']].rename(columns={'date': 'ds'})
-        forecast = model.predict(prophet_df)
-        predictions = forecast['yhat'].values
+    features = ['year', 'month', 'day_of_week', 'day_of_month', 
+                'country_encoded', 'store_encoded', 'product_encoded']
+    predictions = model.predict(df[features]).astype(int)
     
+
     return predictions
 
 # Create tabs for different input methods
@@ -150,14 +140,15 @@ with tab2:
         
         # Display prediction with nice formatting
         st.subheader("Prediction Result")
-        st.metric("Predicted Sales", f"{prediction:.2f} units")
+        st.metric("Predicted Sales", f"{prediction} units")
         
         # Add some context
         st.info(f"The model predicts that {product} will sell approximately {prediction:.2f} units at {store} in {country} on {prediction_date.strftime('%Y-%m-%d')}.")
 
 # Add information about the model
 st.sidebar.header("Model Information")
-st.sidebar.write(f"**Best Model:** {best_model_name}")
+st.sidebar.write(f"**Model:** {best_model_name}")
+st.sidebar.write(f"**R² Score:** {best_r2}")
 st.sidebar.write("**Features used:**")
 st.sidebar.write("- Date (year, month, day of week, day of month)")
 st.sidebar.write("- Country")

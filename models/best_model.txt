@@ -1,1 +1,4 @@
-XGBoost
+XGBoost:
+RMSE: 30.71
+MAE: 19.36
+R2: 0.99

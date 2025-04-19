@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from prophet import Prophet
@@ -50,51 +50,59 @@ def evaluate_models(df):
     for name, model in models.items():
         rmse_scores = []
         mae_scores = []
+        r2_scores = []
         
-        for train_idx, val_idx in tscv.split(df):
+        for train_idx, test_idx in tscv.split(df):
             X_train = df.iloc[train_idx][features]
             y_train = df.iloc[train_idx][target]
-            X_val = df.iloc[val_idx][features]
-            y_val = df.iloc[val_idx][target]
+            X_test = df.iloc[test_idx][features]
+            y_test = df.iloc[test_idx][target]
             
             model.fit(X_train, y_train)
-            predictions = model.predict(X_val)
+            predictions = model.predict(X_test)
             
-            rmse = np.sqrt(mean_squared_error(y_val, predictions))
-            mae = mean_absolute_error(y_val, predictions)
+            rmse = np.sqrt(mean_squared_error(y_test, predictions))
+            mae = mean_absolute_error(y_test, predictions)
+            r2 = r2_score(y_test, predictions)
             
+            r2_scores.append(r2)
             rmse_scores.append(rmse)
             mae_scores.append(mae)
         
         results[name] = {
             'RMSE': np.mean(rmse_scores),
-            'MAE': np.mean(mae_scores)
+            'MAE': np.mean(mae_scores),
+            'R2': np.mean(r2_scores)
         }
     
     # Prophet model evaluation
     prophet_df = df[['date', target]].rename(columns={'date': 'ds', target: 'y'})
     prophet_rmse = []
     prophet_mae = []
+    prophet_r2 = []
     
-    for train_idx, val_idx in tscv.split(prophet_df):
+    for train_idx, test_idx in tscv.split(prophet_df):
         train_data = prophet_df.iloc[train_idx]
-        val_data = prophet_df.iloc[val_idx]
+        test_data = prophet_df.iloc[test_idx]
         
         model = Prophet(yearly_seasonality=True, weekly_seasonality=True)
         model.fit(train_data)
         
-        future_dates = val_data[['ds']]
+        future_dates = test_data[['ds']]
         forecast = model.predict(future_dates)
         
-        rmse = np.sqrt(mean_squared_error(val_data['y'], forecast['yhat']))
-        mae = mean_absolute_error(val_data['y'], forecast['yhat'])
+        rmse = np.sqrt(mean_squared_error(test_data['y'], forecast['yhat']))
+        mae = mean_absolute_error(test_data['y'], forecast['yhat'])
+        r2 = r2_score(test_data['y'], forecast['yhat'])
         
+        prophet_r2.append(r2)
         prophet_rmse.append(rmse)
         prophet_mae.append(mae)
     
     results['Prophet'] = {
         'RMSE': np.mean(prophet_rmse),
-        'MAE': np.mean(prophet_mae)
+        'MAE': np.mean(prophet_mae),
+        'R2': np.mean(prophet_r2)
     }
     
     return results
@@ -112,3 +120,4 @@ if __name__ == '__main__':
         print(f"\n{model}:")
         print(f"RMSE: {metrics['RMSE']:.2f}")
         print(f"MAE: {metrics['MAE']:.2f}")
+        print(f"R2: {metrics['R2']:.2f}")
