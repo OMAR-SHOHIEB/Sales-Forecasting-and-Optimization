@@ -1,10 +1,4 @@
-<<<<<<< HEAD
 XGBoost:
 RMSE: 30.71
 MAE: 19.36
-=======
-XGBoost
-RMSE: 25.91
-MAE: 16.87
->>>>>>> 349e8c916abe2de7eb7f414f6232b66de8f8520a
 R2: 0.99
